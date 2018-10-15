@@ -1,8 +1,8 @@
 'use strict';
 
-export default {
-	port: 3000,
-	url: 'mongodb://localhost:27017/elm',
+module.exports = {
+	port: 8001,
+	url: 'mongodb://139.224.234.213:27017/elm',
 	session: {
 		name: 'elm',
 		secret: 'elm',
