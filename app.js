@@ -29,7 +29,7 @@ app.use(session({
 	name: config.session.name,
   	secret: config.session.secret,
   	resave: true,
-  	saveUninitialized: false,
+  	saveUninitialized: false, // 是否保存未初始化的会话
   	cookie: config.session.cookie,
   	store: new MongoStore({
     	url: config.url
