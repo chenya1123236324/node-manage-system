@@ -1,38 +1,57 @@
 'use strict';
 
 import Cities from '../../models/v1/cities';
-import http from 'http';
 import pinyin from "pinyin";  
-import fetch from 'node-fetch';
+import BaseComponent from '../../prototype/baseComponent'
 
 
-class CityHandle {
+class CityHandle extends BaseComponent{
 	constructor(){
-		this.cityGuess = this.cityGuess.bind(this);
+		super()
+		this.getCity = this.getCity.bind(this);
 	}
-	async cityGuess(req, res, next){
+	async getCity(req, res, next){
 		const type = req.query.type;
-		if (!type) {
+		let cityInfo;
+		try{
+			switch (type){
+				case 'guess': 
+					const city = await this.getCityName(req);
+					cityInfo = await Cities.cityGuess(city);
+					break;
+				case 'hot': 
+					cityInfo = await Cities.cityHot();
+					break;
+				case 'group': 
+					cityInfo = await Cities.cityGroup();
+					break;
+				default: 
+					res.json({
+						name: 'ERROR_QUERY_TYPE',
+						message: '参数错误',
+					})
+					return
+			}
+			res.send(cityInfo);
+		}catch(err){
+			res.send(err);
+		}
+	}
+	async getCityById(req, res, next){
+		const cityid = req.params.id;
+		if (isNaN(cityid)) {
 			res.json({
-				name: 'ERROR_QUERY_TYPE',
+				name: 'ERROR_PARAM_TYPE',
 				message: '参数错误',
 			})
-			return 
+			return
 		}
-		let cityInfo;
-		switch (type){
-			case 'guess': 
-				const city = await this.getCityName(req);
-				cityInfo = await Cities.cityGuess(city);
-				break;
-			case 'hot': 
-				cityInfo = await Cities.cityHot();
-				break;
-			case 'group': 
-				cityInfo = await Cities.cityGroup();
-				break;
+		try{
+			const cityInfo = await Cities.getCityById(cityid);
+			res.send(cityInfo);
+		}catch(err){
+			res.send(err);
 		}
-		res.send(cityInfo)
 	}
 	getCityName(req){
 		return new Promise(async (resolve, reject) => {
@@ -42,27 +61,26 @@ class CityHandle {
 	 		req.connection.socket.remoteAddress;
 	 		const ipArr = ip.split(':');
 	 		ip = ipArr[ipArr.length -1];
-	 		// ip = '116.231.55.195';
+	 		if (process.env.NODE_ENV == 'development') {
+	 			ip = '116.231.55.195';
+	 		}
 	 		/*
 	 		调用新浪接口，获取ip地址信息
 	 		 */
-			const url = 'http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=js&ip=' + ip;
-			let res;
-			try{
-				res = await fetch(url);
-			    res = await res.text();
-			}catch(err){
-				console.log(err)
-			}
-			const cityInfo = JSON.parse(res.split('=')[1].toString().replace(';', ''))
+			const url = 'http://int.dpool.sina.com.cn/iplookup/iplookup.php';
+			let res = await this.fetch(url , {format: 'js', ip,}, 'GET', 'TEXT');
+			const cityInfo = JSON.parse(res.split('=')[1].toString().replace(';', ''));
+			/*
+			汉字转换成拼音
+			 */
 	        const pinyinArr = pinyin(cityInfo.city, {
 			  	style: pinyin.STYLE_NORMAL,
 			});
-			let city = '';
+			let cityName = '';
 			pinyinArr.forEach(item => {
-				city += item[0];
+				cityName += item[0];
 			})
-			resolve(city)
+			resolve(cityName)
 		})
 	}
 }
